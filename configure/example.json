@@ -1,0 +1,9 @@
+{
+    "ResRoot":"E:/code/go/src/crash_server_gate/res",
+    "LogsRoot":"E:/crashserver3/logs",
+
+    "ServerPort":3002,
+    "RemoteWinSvr": "http://127.0.0.1:3001",
+    "CrashApi":     "/postCrash",
+    "PdbsApi":      "/postPdbs"
+}
