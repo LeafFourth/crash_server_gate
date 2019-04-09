@@ -69,7 +69,8 @@ func receiveDmp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	nr.Header.Add("Content-Type", r.Header.Get("Content-Type"));
-
+	//fmt.Println(nr.Header.Get("Content-Type"));
+	//fmt.Println(nr);
 	go RedirtDmp(nr);
 }
 
@@ -105,10 +106,19 @@ func RedirtDmp(r *http.Request) {
 	}
 }
 
+func ReceiveCallStack(w http.ResponseWriter, r *http.Request) {
+	cs := r.FormValue("callback");
+	fmt.Println(cs);
+
+	ei := r.FormValue("einfo");
+	fmt.Println(ei);
+}
+
 func initServer() {
 	handles := make(map[string]func(http.ResponseWriter, *http.Request));
 	handles["/postCrash"] = receiveDmp;
 	handles["/postPdbs"] = receivePdbs;
+	handles["/RecvCallstack"] = ReceiveCallStack;
 	handles["/"] = defaultHandle;
 
 	handler = utilities.NewRequestHandler(&handles);
