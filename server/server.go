@@ -22,6 +22,7 @@ type dmpDesc struct {
 	Uid  int;
 	Ver  string;
 	Date string;
+	Name string;
 }
 
 var handler *utilities.RequestHandler;
@@ -153,7 +154,7 @@ func writeDb(ds dmpDesc, cs string) {
 		cs = cs[:defines.CSFieldLen];
 	}
 
-	_, err := c.Exec("INSERT INTO " + tableName + "(uid, callstack) VALUES(?, ?)", ds.Uid, cs);
+	_, err := c.Exec("INSERT INTO " + tableName + "(name, uid, callstack) VALUES(?, ?, ?)", ds.Name, ds.Uid, cs);
 	if err != nil {
 		common.ErrorLogger.Print(err);
 		return;

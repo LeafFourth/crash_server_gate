@@ -41,7 +41,7 @@ func PreCreateTableForDate(date time.Time) {
 	}
 
 	name := GetTableName(date);
-	sqlcmd := "CREATE table " + name + " (uid int, callstack VARCHAR(2000));"
+	sqlcmd := "CREATE table " + name + " (name VARCHAR(100) PRIMARY KEY, uid int, callstack VARCHAR(2000));"
 
 	conn.Exec(sqlcmd);
 }
