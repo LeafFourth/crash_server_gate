@@ -1,6 +1,7 @@
 package server
 
 import "bytes"
+import "encoding/json"
 import "fmt"
 import "io"
 import "io/ioutil"
@@ -9,11 +10,19 @@ import "os"
 import "path/filepath"
 import "strconv"
 import "strings"
+import "time"
 
 import "utilities"
 
 import "crash_server_gate/common"
 import "crash_server_gate/defines"
+import "crash_server_gate/db"
+
+type dmpDesc struct {
+	Uid  int;
+	Ver  string;
+	Date string;
+}
 
 var handler *utilities.RequestHandler;
 var winSvrClient *http.Client;
@@ -94,7 +103,6 @@ func receivePdbs(w http.ResponseWriter, r *http.Request) {
 
 func RedirtDmp(r *http.Request) {
 	res, err := winSvrClient.Do(r);
-	fmt.Println(res);
 	if err != nil {
 		common.ErrorLogger.Print(err);
 		return;
@@ -106,12 +114,67 @@ func RedirtDmp(r *http.Request) {
 	}
 }
 
+func formatDate(date string) time.Time {
+	length := len(date);
+	if length < 5 {
+		return time.Now();
+	}
+
+	d, _ := strconv.ParseInt(date[length - 2:], 10, 0);
+	m, _ := strconv.ParseInt(date[length - 4: length - 2], 10, 0);
+	y, _ := strconv.ParseInt(date[:length - 4], 10, 0);
+
+	if d == 0 || m == 0 {
+		return time.Now();
+	}
+
+	return time.Date(int(y), time.Month(m), int(d), 0, 0, 0, 0, time.UTC);
+}
+
+func writeDb(ds dmpDesc, cs string) {
+	if ds.Uid == 0 {
+		common.ErrorLogger.Print("uid excepted!");
+		return;
+	}
+
+	date := formatDate(ds.Date);
+
+	db.PreCreateTableForDate(date);
+
+	c := db.GetConn();
+	if c == nil {
+		common.ErrorLogger.Print("db nil");
+		return;
+	}
+
+	tableName := db.GetTableName(date);
+
+	if len(cs) > defines.CSFieldLen {
+		cs = cs[:defines.CSFieldLen];
+	}
+
+	_, err := c.Exec("INSERT INTO " + tableName + "(uid, callstack) VALUES(?, ?)", ds.Uid, cs);
+	if err != nil {
+		common.ErrorLogger.Print(err);
+		return;
+	}
+}
+
 func ReceiveCallStack(w http.ResponseWriter, r *http.Request) {
 	cs := r.FormValue("callback");
-	fmt.Println(cs);
 
 	ei := r.FormValue("einfo");
-	fmt.Println(ei);
+
+	buf := bytes.NewBufferString(ei);
+	var ds dmpDesc;
+	d := json.NewDecoder(buf);
+	err := d.Decode(&ds);
+	if err != nil {
+		common.ErrorLogger.Print(err);
+		return;
+	}
+
+	writeDb(ds, cs);
 }
 
 func initServer() {
