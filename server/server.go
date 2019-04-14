@@ -5,6 +5,7 @@ import "encoding/json"
 import "fmt"
 import "io"
 import "io/ioutil"
+import "mime/multipart"
 import "net/http"
 import "os"
 import "path/filepath"
@@ -66,11 +67,45 @@ func defaultHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 func receiveDmp(w http.ResponseWriter, r *http.Request) {
-	buf :=  new(bytes.Buffer);
-	if _, err := io.Copy(buf, r.Body); err != nil {
+	osFile, fh, err0 := r.FormFile("crashFile");
+	if err0 != nil {
+		common.ErrorLogger.Print(err0);
+		w.WriteHeader(http.StatusBadRequest);
+		return;
+	}
+
+	if fh == nil {
+		common.ErrorLogger.Print("no file");
+		w.WriteHeader(http.StatusBadRequest);
+		w.Write([]byte("empty"));
+		return;
+	}
+	defer osFile.Close();
+
+	tmp := new(bytes.Buffer);
+	if _, err := io.Copy(tmp, osFile); err != nil {
 		common.ErrorLogger.Print(err);
 		return;
 	}
+
+	fn := fh.Filename;
+	if err := utilities.WriteFile(bytes.NewReader(tmp.Bytes()), filepath.Join(defines.DmpRoot, "tmp", fn)); err != nil {
+		common.ErrorLogger.Print("no file");
+	}
+
+	buf :=  new(bytes.Buffer);
+	wr := multipart.NewWriter(buf);
+
+	wr2, err1 := wr.CreateFormFile("crashFile", fn);
+	if err1 != nil {
+		common.ErrorLogger.Print(err1);
+		return;
+	}
+	if _, err := io.Copy(wr2, bytes.NewReader(tmp.Bytes())); err != nil {
+		common.ErrorLogger.Print(err);
+		return;
+	}
+	wr.Close();
 
 	nr, err2 := http.NewRequest(http.MethodPost, defines.RemoteWinSvr + defines.CrashApi, buf);
 	if err2 != nil {
@@ -78,9 +113,8 @@ func receiveDmp(w http.ResponseWriter, r *http.Request) {
 		return;
 	}
 
-	nr.Header.Add("Content-Type", r.Header.Get("Content-Type"));
-	//fmt.Println(nr.Header.Get("Content-Type"));
-	//fmt.Println(nr);
+	nr.Header.Add("Content-Type", "multipart/form-data; " + "boundary=" + wr.Boundary());
+
 	go RedirtDmp(nr);
 }
 

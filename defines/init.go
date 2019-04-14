@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 type conf struct {
 	ResRoot      string;
     LogsRoot     string;
+    DmpRoot      string;
 
     ServerPort   uint;
 
@@ -18,9 +20,11 @@ type conf struct {
 }
 
 func createPaths() {
-	err := os.MkdirAll(LogsRoot, 0644);
+	if err := os.MkdirAll(LogsRoot, 0644); err != nil {
+		fmt.Println(err);
+	}
 
-	if err != nil {
+	if err := os.MkdirAll(filepath.Join(DmpRoot, "tmp"), 0644); err != nil {
 		fmt.Println(err);
 	}
 }
@@ -43,6 +47,7 @@ func InitDefines(confFile string) {
 
 	ResRoot  = c.ResRoot;
 	LogsRoot = c.LogsRoot;
+	DmpRoot  = c.DmpRoot;
 
 	ServerPort = c.ServerPort;
 
@@ -51,5 +56,4 @@ func InitDefines(confFile string) {
 	PdbsApi      = c.PdbsApi;
 
 	createPaths();
-
 }
